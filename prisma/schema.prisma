@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// SQLite 不支持原生 enum，这里用字符串联合类型 + zod 做校验（见 src/lib/stages.ts / src/lib/schemas.ts）。
+
+model Application {
+  id            String       @id @default(cuid())
+  company       String
+  position      String
+  level         String       // INTERN | NEW_GRAD | SOCIAL
+  city          String?
+  channel       String?      // REFERRAL | OFFICIAL | PLATFORM | HEADHUNTER
+  channelDetail String?      // 内推人名字 / 平台名
+  stage         String       @default("APPLIED")
+  salaryMin     Int?
+  salaryMax     Int?
+  jdSnapshot    String?
+  resumeVersion String?
+  notes         String?
+  appliedAt     DateTime
+  lastActionAt  DateTime     @default(now())
+  deadline      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  events        StageEvent[]
+  interviews    Interview[]
+
+  @@index([stage])
+  @@index([deadline])
+}
+
+model StageEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStage     String?
+  toStage       String
+  occurredAt    DateTime    @default(now())
+  note          String?
+
+  @@index([applicationId, occurredAt])
+}
+
+model Interview {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  round         String      // 自由文本：一面/二面/HR面
+  format        String      // PHONE | VIDEO | ONSITE
+  interviewer   String?
+  durationMin   Int?
+  questions     String?
+  selfRating    Int?        // 1-5
+  mood          String?
+  occurredAt    DateTime
+  createdAt     DateTime    @default(now())
+
+  @@index([applicationId, occurredAt])
+}
